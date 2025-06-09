@@ -5,7 +5,7 @@ import logging
 import aiohttp
 import requests
 
-from .utils.protobuf_utils import encode_uid, decode_info, create_protobuf
+from .utils.protobuf_utils import encode_uid, decode_info, create_protobuf, build_protobuf
 from .utils.crypto_utils import encrypt_aes
 from .token_manager import get_headers
 
@@ -15,7 +15,6 @@ like_bp = Blueprint('like_bp', __name__)
 
 _SERVERS = {}
 _token_cache = None
-
 
 
 async def async_post_request(url: str, data: bytes, token: str):
@@ -58,31 +57,42 @@ async def detect_player_region(uid: str):
     return None, None
 
 
+async def async_post_request_with_session(session, url, data, token):
+    try:
+        headers = get_headers(token)
+        async with session.post(url, data=data, headers=headers, timeout=10) as resp:
+            content = await resp.read()
+            print(f"[DEBUG] POST {url} with token {token[:6]}... status={resp.status}")
+            print(f"[DEBUG] Response content (hex): {content.hex()}")
+            return content
+    except Exception as e:
+        print(f"[ERROR] Async request failed: {str(e)}")
+        return None
+
+
 async def send_likes(uid: str, region: str):
     tokens = _token_cache.get_tokens(region)
     like_url = f"{_SERVERS[region]}/LikeProfile"
     encrypted = encrypt_aes(create_protobuf(uid, region))
-    
+
+    print(f"[DEBUG] Sending likes to {like_url} for UID {uid} on region {region}")
+    print(f"[DEBUG] Encrypted protobuf (hex): {encrypted}")
+
     async with aiohttp.ClientSession() as session:
         tasks = [
             async_post_request_with_session(session, like_url, bytes.fromhex(encrypted), token)
             for token in tokens
         ]
         results = await asyncio.gather(*tasks)
-    
-    return {
-        'sent': len(results),
-        'added': sum(1 for r in results if r is not None)
-    }
 
-async def async_post_request_with_session(session, url, data, token):
-    try:
-        headers = get_headers(token)
-        async with session.post(url, data=data, headers=headers, timeout=10) as resp:
-            return await resp.read()
-    except Exception as e:
-        logger.error(f"Async request failed: {str(e)}")
-        return None
+    sent = len(results)
+    added = sum(1 for r in results if r is not None)
+
+    print(f"[DEBUG] Likes sent: {sent}, Likes added (successful responses): {added}")
+    return {
+        'sent': sent,
+        'added': added
+    }
 
 
 @like_bp.route("/report/nickname", methods=["POST"])
