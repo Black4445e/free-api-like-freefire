@@ -259,6 +259,58 @@ def health_check():
             "error": str(e),
             "credits": "https://t.me/nopethug"
         }), 500
+        
+        @like_bp.route("/views", methods=["GET"])
+async def simulate_profile_views():
+    try:
+        uid = request.args.get("uid")
+        region = request.args.get("region")
+
+        if not uid or not uid.isdigit():
+            return jsonify({"error": "Invalid UID", "status": 400}), 400
+
+        if not region or region not in _SERVERS:
+            return jsonify({
+                "error": "Invalid region",
+                "message": f"Supported regions: {', '.join(_SERVERS.keys())}",
+                "status": 400
+            }), 400
+
+        tokens = _token_cache.get_tokens(region)
+        if not tokens:
+            return jsonify({"error": "No tokens available", "status": 400}), 400
+
+        info_url = f"{_SERVERS[region]}/GetPlayerPersonalShow"
+        encrypted_uid = bytes.fromhex(encode_uid(uid))
+
+        async with aiohttp.ClientSession() as session:
+            tasks = [
+                async_post_request_with_session(session, info_url, encrypted_uid, token)
+                for token in tokens
+            ]
+            responses = await asyncio.gather(*tasks)
+
+        success_count = sum(1 for r in responses if r is not None)
+        sample_info = next((decode_info(r) for r in responses if r), None)
+
+        return jsonify({
+            "uid": uid,
+            "region": region,
+            "views_sent": len(tokens),
+            "views_successful": success_count,
+            "nickname": sample_info.AccountInfo.PlayerNickname if sample_info else "N/A",
+            "likes": sample_info.AccountInfo.Likes if sample_info else "N/A",
+            "status": "ok",
+            "credits": "https://t.me/nopethug"
+        })
+
+    except Exception as e:
+        logger.error(f"[simulate_profile_views] Error: {str(e)}", exc_info=True)
+        return jsonify({
+            "error": "Internal server error",
+            "message": str(e),
+            "status": 500
+        }), 500
 
 
 @like_bp.route("/", methods=["GET"])
