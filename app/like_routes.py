@@ -260,7 +260,7 @@ def health_check():
             "credits": "https://t.me/nopethug"
         }), 500
         
-        @like_bp.route("/views", methods=["GET"])
+@like_bp.route("/views", methods=["GET"])
 async def simulate_profile_views():
     try:
         uid = request.args.get("uid")
@@ -328,3 +328,4 @@ def initialize_routes(app_instance, servers_config, token_cache_instance):
     _token_cache = token_cache_instance
     print("[initialize_routes] Routes initialized")
     app_instance.register_blueprint(like_bp)
+
