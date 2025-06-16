@@ -2,12 +2,14 @@ from flask import Blueprint, request, jsonify
 import asyncio
 from datetime import datetime, timezone
 import logging
+import threading
 import aiohttp
 import requests
 
 from .utils.protobuf_utils import encode_uid, decode_info, create_protobuf
 from .utils.crypto_utils import encrypt_aes
 from .token_manager import get_headers
+from byte import Encrypt_ID, encrypt_api
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +52,7 @@ def make_request(uid_enc: str, url: str, token: str):
         logger.error(f"Request error: {str(e)}")
         print(f"[make_request] Exception: {str(e)}")
         return None
-
+        
 
 async def detect_player_region(uid: str):
     print(f"[detect_player_region] Detecting region for UID: {uid}")
@@ -235,6 +237,57 @@ async def like_player():
             "status": 500,
             "credits": "https://t.me/nopethug"
         }), 500
+        
+        
+def send_friend_request(uid, token, results):
+    encrypted_id = Encrypt_ID(uid)
+    payload = f"08a7c4839f1e10{encrypted_id}1801"
+    encrypted_payload = encrypt_api(payload)
+
+    url = "https://client.us.freefiremobile.com/RequestAddingFriend"
+    headers = get_headers(token)
+
+    try:
+        response = requests.post(url, headers=headers, data=bytes.fromhex(encrypted_payload), verify=False, timeout=10)
+        if response.status_code == 200:
+            results["success"] += 1
+        else:
+            results["failed"] += 1
+    except Exception as e:
+        results["failed"] += 1
+        print(f"Request error: {e}")
+
+@like_bp.route("/send_requests", methods=["GET"])
+def send_requests():
+    uid = request.args.get("uid")
+    if not uid:
+        return jsonify({"error": "uid parameter is required"}), 400
+
+    tokens = _token_cache.get_tokens("BR")
+    if not tokens:
+        return jsonify({"error": "No valid tokens found in database"}), 500
+
+    results = {"success": 0, "failed": 0}
+    threads = []
+
+    for token in tokens:
+        thread = threading.Thread(target=send_friend_request, args=(uid, token, results))
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    total_requests = results["success"] + results["failed"]
+    status = 1 if results["success"] > 0 else 2
+
+    return jsonify({
+        "success_count": results["success"],
+        "failed_count": results["failed"],
+        "status": status,
+        "total_tokens_used": total_requests,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
 
 
 @like_bp.route("/health-check", methods=["GET"])
