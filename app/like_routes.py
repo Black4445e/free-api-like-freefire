@@ -5,6 +5,7 @@ import logging
 import threading
 import aiohttp
 import requests
+import time
 
 from .utils.protobuf_utils import encode_uid, decode_info, create_protobuf
 from .utils.crypto_utils import encrypt_aes
@@ -257,6 +258,7 @@ def send_friend_request(uid, token, results):
         results["failed"] += 1
         print(f"Request error: {e}")
 
+
 @like_bp.route("/send_requests", methods=["GET"])
 def send_requests():
     uid = request.args.get("uid")
@@ -268,15 +270,10 @@ def send_requests():
         return jsonify({"error": "No valid tokens found in database"}), 500
 
     results = {"success": 0, "failed": 0}
-    threads = []
 
     for token in tokens:
-        thread = threading.Thread(target=send_friend_request, args=(uid, token, results))
-        threads.append(thread)
-        thread.start()
-
-    for thread in threads:
-        thread.join()
+        send_friend_request(uid, token, results)
+        time.sleep(2)  # Aguarda 2 segundos antes de enviar o próximo
 
     total_requests = results["success"] + results["failed"]
     status = 1 if results["success"] > 0 else 2
