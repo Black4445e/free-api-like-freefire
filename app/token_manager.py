@@ -10,7 +10,7 @@ from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
-AUTH_URL = os.getenv("AUTH_URL", "https://jwtbynexx.vercel.app/token") 
+AUTH_URL = os.getenv("AUTH_URL", "https://info-r2wa.onrender.com/auth") 
 CACHE_DURATION = timedelta(hours=7).seconds
 TOKEN_REFRESH_THRESHOLD = timedelta(hours=6).seconds
 
