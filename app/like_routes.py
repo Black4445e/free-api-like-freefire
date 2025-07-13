@@ -273,7 +273,7 @@ def send_requests():
 
     for token in tokens:
         send_friend_request(uid, token, results)
-        time.sleep(2)  # Aguarda 2 segundos antes de enviar o próximo
+        # Removido o time.sleep(2) para enviar tudo de uma vez
 
     total_requests = results["success"] + results["failed"]
     status = 1 if results["success"] > 0 else 2
