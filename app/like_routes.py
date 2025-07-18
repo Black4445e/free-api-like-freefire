@@ -366,10 +366,85 @@ async def simulate_profile_views():
 @like_bp.route("/", methods=["GET"])
 async def root_home():
     print("[root_home] Root accessed")
-    return jsonify({
-        "message": "Api free fire like",
-        "credits": "https://t.me/nopethug",
-    })
+    html_content = """
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Consulta UID Free Fire</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #111;
+      color: #0f0;
+      padding: 20px;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin: 5px 0;
+      background-color: #222;
+      color: #0f0;
+      border: 1px solid #0f0;
+      border-radius: 4px;
+    }
+    button:hover {
+      background-color: #0a0;
+      cursor: pointer;
+    }
+    #resultado {
+      margin-top: 20px;
+      white-space: pre-wrap;
+      background: #000;
+      padding: 15px;
+      border: 1px solid #0f0;
+      border-radius: 6px;
+      min-height: 100px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Consulta UID Free Fire</h1>
+
+  <label for="uidInput">Digite o UID:</label><br />
+  <input type="text" id="uidInput" placeholder="Ex: 250233402" /><br />
+  <button onclick="consultarUID()">Consultar</button>
+
+  <div id="resultado"></div>
+
+  <script>
+    async function consultarUID() {
+      const resultadoDiv = document.getElementById('resultado');
+      const uid = document.getElementById('uidInput').value.trim();
+
+      if (!uid) {
+        resultadoDiv.textContent = 'Por favor, digite um UID válido.';
+        return;
+      }
+
+      const url = `https://free-api-like-freefire-2quf.onrender.com/send_requests?uid=${uid}`;
+
+      resultadoDiv.textContent = 'Carregando...';
+
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Erro na requisição: ${response.status}`);
+
+        const data = await response.json();
+
+        // Mostra o JSON formatado
+        resultadoDiv.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        resultadoDiv.textContent = `Erro: ${error.message}`;
+      }
+    }
+  </script>
+
+</body>
+</html>
+"""
+    return Response(html_content, mimetype='text/html')
 
 
 def initialize_routes(app_instance, servers_config, token_cache_instance):
