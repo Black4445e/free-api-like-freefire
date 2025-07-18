@@ -363,7 +363,7 @@ async def simulate_profile_views():
         }), 500
 
 
-@app.route("/")
+@like_bp.route("/")
 def home():
     return render_template("index.html")
 
