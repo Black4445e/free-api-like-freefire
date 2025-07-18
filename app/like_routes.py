@@ -363,10 +363,9 @@ async def simulate_profile_views():
         }), 500
 
 
-@like_bp.route("/")
-def home():
-    return render_template("index.html")
-
+@like_bp.route('/')
+def serve_html():
+    return send_from_directory('.', 'index.html')
 def initialize_routes(app_instance, servers_config, token_cache_instance):
     global _SERVERS, _token_cache
     _SERVERS = servers_config
