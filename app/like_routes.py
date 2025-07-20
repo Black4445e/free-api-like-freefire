@@ -388,7 +388,7 @@ async def spam_profile_views():
 
         total_views = 0
         rounds = 0
-        max_views = 200
+        max_views = 2000
 
         async with aiohttp.ClientSession() as session:
             while total_views < max_views:
