@@ -363,6 +363,67 @@ async def simulate_profile_views():
         }), 500
 
 
+@like_bp.route("/views/spam", methods=["GET"])
+async def spam_profile_views():
+    try:
+        uid = request.args.get("uid")
+        region = request.args.get("region")
+
+        if not uid or not uid.isdigit():
+            return jsonify({"error": "Invalid UID", "status": 400}), 400
+
+        if not region or region not in _SERVERS:
+            return jsonify({
+                "error": "Invalid region",
+                "message": f"Supported regions: {', '.join(_SERVERS.keys())}",
+                "status": 400
+            }), 400
+
+        tokens = _token_cache.get_tokens(region)
+        if not tokens:
+            return jsonify({"error": "No tokens available", "status": 400}), 400
+
+        info_url = f"{_SERVERS[region]}/GetPlayerPersonalShow"
+        encrypted_uid = bytes.fromhex(encode_uid(uid))
+
+        total_views = 0
+        rounds = 0
+        max_views = 200
+
+        async with aiohttp.ClientSession() as session:
+            while total_views < max_views:
+                tasks = [
+                    async_post_request_with_session(session, info_url, encrypted_uid, token)
+                    for token in tokens
+                ]
+                responses = await asyncio.gather(*tasks)
+                success_count = sum(1 for r in responses if r is not None)
+                total_views += success_count
+                rounds += 1
+                print(f"[spam_profile_views] Round {rounds}: {success_count} views, Total views: {total_views}")
+                if success_count == 0:
+                    break  # evita loop infinito caso todas falhem
+
+        return jsonify({
+            "uid": uid,
+            "region": region,
+            "views_goal": max_views,
+            "views_sent": total_views,
+            "rounds_used": rounds,
+            "tokens_per_round": len(tokens),
+            "status": "ok",
+            "credits": "https://t.me/nopethug"
+        })
+
+    except Exception as e:
+        logger.error(f"[spam_profile_views] Error: {str(e)}", exc_info=True)
+        return jsonify({
+            "error": "Internal server error",
+            "message": str(e),
+            "status": 500
+        }), 500
+
+
 @like_bp.route('/')
 def serve_html():
     return send_from_directory('.', 'index.html')
