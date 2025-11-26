@@ -95,5 +95,5 @@ def get_headers(token: str):
         "Content-Type": "application/x-www-form-urlencoded",
         "X-Unity-Version": "2018.4.11f1",
         "X-GA": "v1 1",
-        "ReleaseVersion": "OB49"
+        "ReleaseVersion": "OB51"
     }
